@@ -1,0 +1,8 @@
+name = "cinemax-auth"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cinemax-auth-db"
+database_id = "37ba839f-9f07-4153-91d5-63f6a7da284f"

@@ -2,7 +2,16 @@ function getUser() {
   return JSON.parse(localStorage.getItem('cinemax_user') || 'null');
 }
 
-function logout() {
+async function logout() {
+  const user = getUser();
+  if (user?.token) {
+    try {
+      await fetch(`${AUTH_API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+    } catch (_) {}
+  }
   localStorage.removeItem('cinemax_user');
   window.location.href = 'index.html';
 }
@@ -55,4 +64,21 @@ function renderUserNav() {
   if (typeof applyLang === 'function') applyLang();
 }
 
-document.addEventListener('DOMContentLoaded', renderUserNav);
+async function validateUserSession() {
+  const user = getUser();
+  if (!user?.token) return;
+  try {
+    const response = await fetch(`${AUTH_API_BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${user.token}` }
+    });
+    if (response.status === 401) {
+      localStorage.removeItem('cinemax_user');
+      renderUserNav();
+    }
+  } catch (_) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderUserNav();
+  validateUserSession();
+});

@@ -1,4 +1,5 @@
 const REMOTE_API_BASE = 'https://cinemax-api-2maf.onrender.com/api';
+const AUTH_API_BASE = 'https://cinemax-auth.hazahan70.workers.dev/api';
 const API_BASE = window.CINEMAX_LOCAL_API === true ? 'http://localhost:5000/api' : REMOTE_API_BASE;
 
 async function backendFetch(path, options) {

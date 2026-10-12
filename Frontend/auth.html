@@ -146,7 +146,8 @@
   if (localStorage.getItem('cinemax_theme') === 'light') document.body.classList.add('light-mode');
 
   const user = JSON.parse(localStorage.getItem('cinemax_user') || 'null');
-  if (user) window.location.href = 'index.html';
+  if (user?.token) window.location.href = 'index.html';
+  else if (user) localStorage.removeItem('cinemax_user');
 
   function switchTab(tab) {
     const isLogin = tab === 'login';
@@ -214,7 +215,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in...';
     try {
-      const res = await backendFetch('/auth/login', {
+      const res = await authFetch('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value })
@@ -242,7 +243,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating account...';
     try {
-      const res = await backendFetch('/auth/register', {
+      const res = await authFetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: document.getElementById('regUsername').value.trim(), email: document.getElementById('regEmail').value.trim(), password: pass })
@@ -270,6 +271,10 @@
         : 'Не удалось выполнить запрос.';
     }
     return data;
+  }
+
+  function authFetch(path, options) {
+    return fetch(`${AUTH_API_BASE}${path}`, options);
   }
 </script>
 </body>
