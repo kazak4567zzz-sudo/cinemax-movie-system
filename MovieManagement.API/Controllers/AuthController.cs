@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MovieManagement.API.Data;
 using MovieManagement.API.Models;
 using System.Security.Cryptography;
 using System.Text;
+using System.ComponentModel.DataAnnotations;
 
 namespace MovieManagement.API.Controllers;
 
@@ -14,6 +16,8 @@ public class AuthController : ControllerBase
     private readonly MovieDbContext _context;
     public AuthController(MovieDbContext context) => _context = context;
 
+    private static readonly PasswordHasher<User> PasswordHasher = new();
+
     private static string HashPassword(string password)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
@@ -23,23 +27,32 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
-            return BadRequest(new { message = "Username, email and password are required." });
+        var username = dto.Username?.Trim() ?? string.Empty;
+        var email = dto.Email?.Trim().ToLowerInvariant() ?? string.Empty;
 
-        if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(dto.Password))
+            return BadRequest(new { message = "Username, email and password are required." });
+        if (username.Length is < 3 or > 30)
+            return BadRequest(new { message = "Username must contain 3–30 characters." });
+        if (!new EmailAddressAttribute().IsValid(email))
+            return BadRequest(new { message = "Enter a valid email address." });
+        if (dto.Password.Length is < 8 or > 128)
+            return BadRequest(new { message = "Password must contain 8–128 characters." });
+
+        if (await _context.Users.AnyAsync(u => u.Email.ToLower() == email))
             return Conflict(new { message = "Email already registered." });
 
-        if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
+        if (await _context.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
             return Conflict(new { message = "Username already taken." });
 
         var user = new User
         {
-            Username = dto.Username,
-            Email = dto.Email,
-            PasswordHash = HashPassword(dto.Password),
+            Username = username,
+            Email = email,
             CountryID = 1,
             RegistrationDate = DateTime.UtcNow
         };
+        user.PasswordHash = PasswordHasher.HashPassword(user, dto.Password);
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
@@ -53,19 +66,38 @@ public class AuthController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
             return BadRequest(new { message = "Email and password are required." });
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var email = dto.Email.Trim().ToLowerInvariant();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email);
         if (user == null)
             return Unauthorized(new { message = "Invalid email or password." });
 
+        var verified = false;
+        var needsRehash = false;
         if (string.IsNullOrEmpty(user.PasswordHash))
+            return Unauthorized(new { message = "This account has no password. Register a new account." });
+
+        if (user.PasswordHash.Length == 64 && user.PasswordHash.All(Uri.IsHexDigit))
         {
-            user.PasswordHash = HashPassword(dto.Password);
-            await _context.SaveChangesAsync();
-            return Ok(new { userID = user.UserID, username = user.Username, email = user.Email });
+            var legacyHash = HashPassword(dto.Password);
+            verified = CryptographicOperations.FixedTimeEquals(
+                Encoding.ASCII.GetBytes(user.PasswordHash), Encoding.ASCII.GetBytes(legacyHash));
+            needsRehash = verified;
+        }
+        else
+        {
+            var result = PasswordHasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
+            verified = result != PasswordVerificationResult.Failed;
+            needsRehash = result == PasswordVerificationResult.SuccessRehashNeeded;
         }
 
-        if (user.PasswordHash != HashPassword(dto.Password))
+        if (!verified)
             return Unauthorized(new { message = "Invalid email or password." });
+
+        if (needsRehash)
+        {
+            user.PasswordHash = PasswordHasher.HashPassword(user, dto.Password);
+            await _context.SaveChangesAsync();
+        }
 
         return Ok(new { userID = user.UserID, username = user.Username, email = user.Email });
     }

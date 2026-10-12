@@ -7,25 +7,33 @@ function logout() {
   window.location.href = 'index.html';
 }
 
+function escapeUserText(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  })[char]);
+}
+
 function renderUserNav() {
   const container = document.getElementById('userNavArea');
   if (!container) return;
   const user = getUser();
   if (user) {
-    const initial = (user.username || 'U')[0].toUpperCase();
+    const username = escapeUserText(user.username || 'User');
+    const email = escapeUserText(user.email || '');
+    const initial = escapeUserText((user.username || 'U')[0].toUpperCase());
     container.innerHTML = `
       <div class="user-nav-wrap" style="position:relative;">
-        <button class="user-avatar-btn" onclick="document.getElementById('userDropdown').classList.toggle('show')" title="${user.username}">
+        <button class="user-avatar-btn" onclick="document.getElementById('userDropdown').classList.toggle('show')" title="${username}">
           <span class="user-avatar">${initial}</span>
-          <span class="user-name">${user.username}</span>
+          <span class="user-name">${username}</span>
           <i class="bi bi-chevron-down" style="font-size:10px;"></i>
         </button>
         <div class="user-dropdown" id="userDropdown">
           <div class="user-dropdown-header">
             <div class="user-avatar large">${initial}</div>
             <div>
-              <div style="font-weight:700;font-size:14px;">${user.username}</div>
-              <div style="font-size:11px;color:#666;">${user.email}</div>
+              <div style="font-weight:700;font-size:14px;">${username}</div>
+              <div style="font-size:11px;color:#666;">${email}</div>
             </div>
           </div>
           <div class="user-dropdown-divider"></div>

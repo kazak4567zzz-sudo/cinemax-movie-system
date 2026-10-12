@@ -134,7 +134,7 @@
   <script src="js/auth-helper.js"></script>
   <script>
     let currentPage = 1, totalCount = 0, currentGenre = '', currentSort = 'rating', searchTimeout;
-    const pageSize = 12;
+    const pageSize = catalog.enabled ? 20 : 12;
 
     async function loadGenres() {
       try {
@@ -167,8 +167,9 @@
         const params = new URLSearchParams({ page: currentPage, pageSize: year ? 100 : pageSize, sortBy: sort });
         if (search) params.append('search', search);
         if (currentGenre) params.append('genreId', currentGenre);
+        if (year) params.append('year', year);
         let { data: movies, total } = await api.getWithHeaders(`/movies?${params}`);
-        if (year) {
+        if (year && !catalog.enabled) {
           movies = movies.filter(m => m.releaseYear == year);
           total = movies.length;
           movies = movies.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -186,6 +187,7 @@
             <button class="btn-fav ${favs.includes(m.movieID)?'active':''}" onclick="event.stopPropagation();toggleFav(${m.movieID},'${m.title.replace(/'/g,"'")}',this)" title="Add to favorites">${favs.includes(m.movieID)?'❤️':'🤍'}</button>
             ${m.posterUrl ? `<img class="movie-poster" src="${m.posterUrl}" alt="${m.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
             <div class="movie-poster-placeholder" ${m.posterUrl ? 'style="display:none"' : ''}>🎬</div>
+            ${m.trailerUrl ? '<span class="movie-card-play"><i class="bi bi-play-fill"></i></span>' : ''}
             <div class="movie-card-overlay"><p class="overlay-desc">${m.description||''}</p></div>
             <div class="movie-info">
               <div class="movie-title" title="${m.title}">${m.title}</div>
@@ -197,7 +199,7 @@
                 <span class="movie-rating"><i class="bi bi-star-fill"></i> ${m.rating.toFixed(1)}</span>
                 ${m.is3D ? '<span style="font-size:10px;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 6px;border-radius:4px;">3D</span>' : ''}
               </div>
-              <a href="movie.html?id=${m.movieID}" class="btn-details">View Details</a>
+              <a href="movie.html?id=${m.movieID}#trailerSection" class="btn-details"><i class="bi bi-play-circle me-1"></i> Трейлер и просмотр</a>
             </div>
           </div>`).join('');
         renderPagination(Math.ceil(total / pageSize));
@@ -260,15 +262,16 @@
         ]);
         const m = topMovies.data[0];
         document.getElementById('statMovies').textContent = topMovies.total;
-        document.getElementById('statActors').textContent = actors.length;
-        document.getElementById('statDirectors').textContent = directors.length;
+        document.getElementById('statActors').textContent = actors.length || '10+';
+        document.getElementById('statDirectors').textContent = directors.length || '5+';
         if (m) {
           if (m.posterUrl) {
-            document.getElementById('featuredBackdrop').style.backgroundImage = `url('${m.posterUrl}')`;
+            document.getElementById('featuredBackdrop').style.backgroundImage = `url('${m.backdropUrl || m.posterUrl}')`;
           }
           document.getElementById('featuredTitle').textContent = m.title;
           document.getElementById('featuredDesc').textContent = m.description?.substring(0,160) + '...';
-          document.getElementById('featuredBtn').href = `movie.html?id=${m.movieID}`;
+          document.getElementById('featuredBtn').href = `movie.html?id=${m.movieID}#trailerSection`;
+          document.getElementById('featuredBtn').innerHTML = '<i class="bi bi-play-fill me-2"></i>Трейлер и где смотреть';
           document.getElementById('featuredMeta').innerHTML = `
             <span class="featured-tag"><i class="bi bi-star-fill me-1" style="color:#f5c518"></i>${m.rating.toFixed(1)}</span>
             <span class="featured-tag">${m.releaseYear}</span>

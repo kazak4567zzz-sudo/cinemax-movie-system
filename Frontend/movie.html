@@ -61,6 +61,44 @@
     const id = new URLSearchParams(location.search).get('id');
     let userRating = 0;
 
+    function legalServices(movie) {
+      const query = encodeURIComponent(`${movie.title} ${movie.releaseYear || ''}`.trim());
+      return [
+        { name: 'Apple TV', detail: 'Аренда или покупка', icon: 'apple', url: `https://tv.apple.com/kz/search?term=${query}` },
+        { name: 'Google TV / YouTube', detail: 'Аренда или покупка', icon: 'google-play', url: `https://www.youtube.com/results?search_query=${query}+movie` },
+        { name: 'Кинопоиск', detail: 'Подписка или аренда', icon: 'film', url: `https://www.kinopoisk.ru/index.php?kp_query=${query}` },
+        { name: 'Plex', detail: 'Бесплатно или по подписке', icon: 'play-btn-fill', url: `https://watch.plex.tv/search?q=${query}` },
+        { name: 'Prime Video', detail: 'Подписка или аренда', icon: 'amazon', url: `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${query}` }
+      ];
+    }
+
+    function renderLegalServices(movie) {
+      const services = legalServices(movie);
+      const verifiedProviders = movie.providers?.items || [];
+      return `
+        <div class="movies-section legal-watch-section" id="watchProviders">
+          <div class="legal-watch-heading">
+            <div>
+              <div class="legal-kicker"><i class="bi bi-shield-check"></i> Легальный просмотр</div>
+              <h2 class="section-title mb-2">Где посмотреть фильм</h2>
+              <p>Проверьте наличие «${movie.title}» на официальных видеосервисах. Каталог и цена зависят от региона.</p>
+            </div>
+            <span class="region-pill"><i class="bi bi-geo-alt-fill"></i> Казахстан</span>
+          </div>
+          ${verifiedProviders.length ? `<div class="verified-provider-label">Доступность найдена через JustWatch</div><div class="provider-row mb-3">${verifiedProviders.map(p => `
+            <a class="provider-card verified" href="${movie.providers.link}" target="_blank" rel="noopener">
+              <img src="${p.logo}" alt="${p.name}"><div><strong>${p.name}</strong><span>${p.type}</span></div><i class="bi bi-box-arrow-up-right provider-arrow"></i>
+            </a>`).join('')}</div>` : ''}
+          <div class="provider-row">${services.map(service => `
+            <a class="provider-card service-link" href="${service.url}" target="_blank" rel="noopener">
+              <span class="provider-icon"><i class="bi bi-${service.icon}"></i></span>
+              <div><strong>${service.name}</strong><span>${service.detail}</span></div>
+              <i class="bi bi-chevron-right provider-arrow"></i>
+            </a>`).join('')}</div>
+          <div class="provider-note"><i class="bi bi-info-circle"></i> CineMax не продаёт подписки и не гарантирует наличие фильма: сервис подтвердит доступность после перехода.</div>
+        </div>`;
+    }
+
     async function load() {
       if (!id) { location.href = 'index.html'; return; }
       try {
@@ -76,7 +114,7 @@
       document.getElementById('movieDetail').innerHTML = `
         <!-- HERO -->
         <div class="movie-detail-hero">
-          <div class="movie-backdrop" style="background-image:url('${m.posterUrl}')"></div>
+          <div class="movie-backdrop" style="background-image:url('${m.backdropUrl || m.posterUrl}')"></div>
           <div class="movie-detail-content">
             ${m.posterUrl
               ? `<img class="movie-detail-poster" src="${m.posterUrl}" alt="${m.title}" onerror="this.src=''">`
@@ -97,11 +135,11 @@
               </div>
               <p class="movie-description">${m.description}</p>
               <div class="d-flex gap-2 mb-4" style="flex-wrap:wrap;">
-                <a href="movie.html?id=${m.movieID}" class="btn-red" style="padding:10px 24px;"><i class="bi bi-info-circle me-2"></i>Details</a>
-                ${m.trailerUrl ? `<button onclick="document.getElementById('trailerSection').scrollIntoView({behavior:'smooth'})" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;"><i class="bi bi-play-circle me-2"></i>Watch Trailer</button>` : ''}
+                ${m.trailerUrl ? `<button onclick="document.getElementById('trailerSection').scrollIntoView({behavior:'smooth'});setTimeout(playTrailer,450)" class="btn-red" style="padding:10px 24px;"><i class="bi bi-play-fill me-2"></i>Смотреть трейлер</button>` : ''}
+                <button onclick="document.getElementById('watchProviders').scrollIntoView({behavior:'smooth'})" class="catalog-secondary"><i class="bi bi-tv me-2"></i>Где смотреть</button>
               </div>
               <div class="stats-row">
-                <div class="stat-box" onclick="event.stopPropagation();window.location='director.html?id=${m.directorID}'" style="cursor:pointer;" title="View director">
+                <div class="stat-box" ${m._source ? '' : `onclick="event.stopPropagation();window.location='director.html?id=${m.directorID}'" style="cursor:pointer;" title="View director"`}>
                   <div class="stat-value" style="color:#e50914;">${m.directorName} <i class="bi bi-box-arrow-up-right" style="font-size:11px;"></i></div>
                   <div class="stat-label">Director</div>
                 </div>
@@ -119,18 +157,34 @@
           </div>
         </div>
 
-        <!-- TRAILER -->
+        <!-- CINEMA PLAYER -->
         <div class="movies-section" id="trailerSection" style="display:none;">
-          <h2 class="section-title mb-4"><i class="bi bi-play-circle me-2" style="color:#e50914"></i>Official Trailer</h2>
-          <div id="trailerThumb" class="trailer-thumb" onclick="playTrailer()">
-            <img id="trailerPoster" src="" alt="Trailer" style="width:100%;max-height:420px;object-fit:cover;border-radius:12px;display:block;">
-            <div class="trailer-play"><i class="bi bi-play-fill"></i></div>
-          </div>
-          <div id="trailerEmbed" style="display:none;">
-            <div class="trailer-container">
-              <iframe id="trailerFrame" src="" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"></iframe>
+          <h2 class="section-title mb-4"><i class="bi bi-play-circle-fill me-2" style="color:#e50914"></i>Официальный трейлер</h2>
+          <div class="cinema-shell">
+            <div class="cinema-screen">
+              <div id="trailerThumb" class="cinema-cover" onclick="playTrailer()" style="display:none">
+                <img id="trailerPoster" src="" alt="${m.title} — официальный трейлер">
+                <div class="trailer-play"><i class="bi bi-play-fill"></i></div>
+                <div class="cinema-cover-copy"><strong>${m.title}</strong><span>Официальный трейлер</span></div>
+              </div>
+              <iframe id="trailerFrame" src="" title="${m.title} — официальный трейлер" allowfullscreen allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin"></iframe>
             </div>
+            <div class="cinema-toolbar">
+              <div class="cinema-toolbar-copy"><strong id="currentVideoTitle">Официальный трейлер</strong><span>YouTube · канал правообладателя или студии</span></div>
+              <div class="cinema-actions">
+                <a id="youtubeFallback" class="cinema-external" href="#" target="_blank" rel="noopener"><i class="bi bi-youtube"></i><span>Открыть на YouTube</span></a>
+                <button class="cinema-fullscreen" onclick="openCinema()"><i class="bi bi-arrows-fullscreen me-2"></i>На весь экран</button>
+              </div>
+            </div>
+            ${m.videos?.length > 1 ? `<div class="video-list">${m.videos.map((v,i) => `<button class="video-chip ${i===0?'active':''}" onclick="selectVideo('${v.key}', '${String(v.name).replace(/'/g, "&#39;")}', this)">${v.type}: ${v.name}</button>`).join('')}</div>` : ''}
           </div>
+        </div>
+
+        ${renderLegalServices(m)}
+
+        <div class="cinema-lightbox" id="cinemaLightbox">
+          <button class="cinema-lightbox-close" onclick="closeCinema()" aria-label="Закрыть">&times;</button>
+          <div class="cinema-lightbox-inner"><div class="cinema-screen"><iframe id="cinemaFrame" src="" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></div></div>
         </div>
 
         <!-- BOX OFFICE -->
@@ -267,16 +321,53 @@
 
       if (m.trailerUrl) {
         document.getElementById('trailerSection').style.display = '';
-        document.getElementById('trailerFrame').src = `https://www.youtube.com/embed/${m.trailerUrl}?rel=0&autoplay=1`;
+        const trailerFrame = document.getElementById('trailerFrame');
+        trailerFrame.dataset.key = m.trailerUrl;
+        trailerFrame.src = youtubeEmbed(m.trailerUrl);
+        document.getElementById('youtubeFallback').href = `https://www.youtube.com/watch?v=${m.trailerUrl}`;
+        if (location.hash === '#trailerSection') {
+          setTimeout(() => document.getElementById('trailerSection').scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+        }
         const thumb = `https://img.youtube.com/vi/${m.trailerUrl}/maxresdefault.jpg`;
         document.getElementById('trailerPoster').src = thumb;
         document.getElementById('trailerPoster').onerror = function() { this.src = `https://img.youtube.com/vi/${m.trailerUrl}/hqdefault.jpg`; };
       }
+      loadSimilar(m.genreID, m.movieID);
     }
 
     function playTrailer() {
       document.getElementById('trailerThumb').style.display = 'none';
-      document.getElementById('trailerEmbed').style.display = '';
+      const frame = document.getElementById('trailerFrame');
+      frame.style.display = 'block';
+      frame.src = youtubeEmbed(frame.dataset.key, true);
+    }
+
+    function youtubeEmbed(key, autoplay = false) {
+      return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(key)}?rel=0&playsinline=1&modestbranding=1${autoplay ? '&autoplay=1' : ''}`;
+    }
+
+    function selectVideo(key, name, button) {
+      document.querySelectorAll('.video-chip').forEach(x => x.classList.remove('active'));
+      button.classList.add('active');
+      document.getElementById('currentVideoTitle').textContent = name;
+      const frame = document.getElementById('trailerFrame');
+      frame.dataset.key = key;
+      document.getElementById('youtubeFallback').href = `https://www.youtube.com/watch?v=${key}`;
+      document.getElementById('trailerPoster').src = `https://img.youtube.com/vi/${key}/maxresdefault.jpg`;
+      frame.src = youtubeEmbed(key);
+    }
+
+    function openCinema() {
+      const key = document.getElementById('trailerFrame').dataset.key;
+      document.getElementById('cinemaFrame').src = youtubeEmbed(key, true);
+      document.getElementById('cinemaLightbox').classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCinema() {
+      document.getElementById('cinemaLightbox').classList.remove('show');
+      document.getElementById('cinemaFrame').src = '';
+      document.body.style.overflow = '';
     }
 
     async function loadSimilar(genreId, currentId) {
@@ -322,6 +413,21 @@
       e.preventDefault();
       if (!userRating) { showToast('Please select a rating', 'error'); return; }
       try {
+        if (catalog.enabled) {
+          const key = `cinemax_tmdb_reviews_${id}`;
+          const reviews = JSON.parse(localStorage.getItem(key) || '[]');
+          reviews.unshift({
+            username: document.getElementById('rUsername').value,
+            email: document.getElementById('rEmail').value,
+            commentText: document.getElementById('rComment').value,
+            userRating,
+            reviewDate: new Date().toISOString()
+          });
+          localStorage.setItem(key, JSON.stringify(reviews));
+          showToast('Отзыв сохранён в браузере');
+          setTimeout(() => load(), 300);
+          return;
+        }
         await api.post('/reviews', {
           movieID: parseInt(id),
           username: document.getElementById('rUsername').value,

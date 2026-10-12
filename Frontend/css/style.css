@@ -14,7 +14,6 @@
   --radius: 8px;
   --shadow: 0 8px 32px rgba(0,0,0,0.6);
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -566,6 +565,8 @@ footer {
 .btn-fav:hover { background:rgba(229,9,20,0.8); transform:scale(1.1); }
 .btn-fav.active { background:rgba(229,9,20,0.9); }
 .movie-card { position:relative; }
+.movie-card-play { position:absolute; z-index:3; top:40%; left:50%; width:54px; height:54px; display:grid; place-items:center; transform:translate(-50%,-50%) scale(.82); border-radius:50%; background:rgba(229,9,20,.94); color:#fff; font-size:27px; opacity:0; box-shadow:0 8px 28px rgba(229,9,20,.45); transition:opacity .2s,transform .2s; pointer-events:none; }
+.movie-card:hover .movie-card-play { opacity:1; transform:translate(-50%,-50%) scale(1); }
 
 /* DARK/LIGHT MODE TOGGLE */
 .theme-toggle { background:none; border:1px solid var(--border); border-radius:20px; padding:6px 14px; color:var(--text-secondary); cursor:pointer; font-size:13px; display:flex; align-items:center; gap:6px; transition:all .2s; }
@@ -612,3 +613,61 @@ body.light-mode .table-dark-custom { background:#fff; border:1px solid #eee; }
 .trailer-thumb img { width:100%; border-radius:12px; display:block; }
 .trailer-play { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:70px; height:70px; background:rgba(229,9,20,0.9); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; transition:all .2s; }
 .trailer-thumb:hover .trailer-play { transform:translate(-50%,-50%) scale(1.1); background:#e50914; }
+
+.catalog-secondary { border:1px solid var(--border); border-radius:8px; padding:10px 18px; background:transparent; color:var(--text-secondary); }
+
+/* CINEMA PLAYER */
+.cinema-shell { position:relative; overflow:hidden; border:1px solid var(--border); border-radius:18px; background:#050507; box-shadow:0 25px 70px rgba(0,0,0,.42); }
+.cinema-screen { position:relative; aspect-ratio:16/9; background:#000; }
+.cinema-screen iframe { width:100%; height:100%; border:0; display:block; }
+.cinema-cover { position:absolute; inset:0; cursor:pointer; overflow:hidden; }
+.cinema-cover img { width:100%; height:100%; object-fit:cover; opacity:.62; }
+.cinema-cover::after { content:''; position:absolute; inset:0; background:linear-gradient(0deg,rgba(0,0,0,.8),transparent 60%); }
+.cinema-cover .trailer-play { z-index:2; width:84px; height:84px; box-shadow:0 0 0 14px rgba(229,9,20,.15); }
+.cinema-cover-copy { position:absolute; z-index:2; left:28px; bottom:24px; }
+.cinema-cover-copy strong { display:block; color:#fff; font-size:20px; }
+.cinema-cover-copy span { color:#bbb; font-size:13px; }
+.cinema-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 18px; border-top:1px solid #1e1e28; }
+.cinema-toolbar-copy strong { display:block; font-size:14px; }
+.cinema-toolbar-copy span { color:var(--text-muted); font-size:11px; }
+.cinema-actions { display:flex; align-items:center; gap:8px; }
+.cinema-external { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--border); border-radius:8px; padding:8px 11px; color:var(--text-secondary); text-decoration:none; font-size:12px; }
+.cinema-external:hover { border-color:#ff0033; color:#fff; }
+.cinema-fullscreen { border:1px solid var(--border); background:#15151d; color:#fff; border-radius:8px; padding:8px 12px; }
+.video-list { display:flex; gap:8px; overflow:auto; padding:14px 18px 18px; scrollbar-width:thin; }
+.video-chip { flex:0 0 auto; border:1px solid var(--border); border-radius:999px; padding:7px 13px; background:#101017; color:var(--text-secondary); font-size:12px; }
+.video-chip.active,.video-chip:hover { border-color:var(--accent); color:#fff; background:rgba(229,9,20,.12); }
+.legal-watch-section { scroll-margin-top:96px; background:linear-gradient(145deg,rgba(229,9,20,.055),transparent 42%); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+#trailerSection { scroll-margin-top:96px; }
+.legal-watch-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:24px; }
+.legal-watch-heading p { margin:0; color:var(--text-muted); font-size:13px; }
+.legal-kicker { display:flex; align-items:center; gap:7px; margin-bottom:8px; color:#65d987; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.region-pill { display:inline-flex; align-items:center; gap:6px; flex:none; padding:7px 11px; border:1px solid var(--border); border-radius:999px; color:var(--text-secondary); font-size:11px; }
+.verified-provider-label { margin:0 0 10px; color:#65d987; font-size:11px; font-weight:700; }
+.provider-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(205px,1fr)); gap:12px; }
+.provider-card { display:flex; align-items:center; gap:11px; min-height:66px; padding:11px 13px; color:#fff; text-decoration:none; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; transition:.2s; }
+.provider-card:hover { color:#fff; border-color:var(--accent); transform:translateY(-2px); }
+.provider-card img { width:38px; height:38px; border-radius:9px; }
+.provider-card strong { display:block; font-size:13px; }
+.provider-card div span { color:var(--text-muted); font-size:10px; }
+.provider-card.verified { border-color:rgba(70,211,105,.25); }
+.provider-icon { width:39px; height:39px; display:grid; place-items:center; flex:none; border-radius:10px; background:rgba(255,255,255,.055); color:#fff; font-size:18px; }
+.provider-arrow { margin-left:auto; color:var(--text-muted); font-size:12px; }
+.provider-note { color:var(--text-muted); font-size:11px; margin-top:15px; }
+.cinema-lightbox { position:fixed; inset:0; z-index:1200; display:none; align-items:center; justify-content:center; padding:3vw; background:rgba(0,0,0,.96); }
+.cinema-lightbox.show { display:flex; }
+.cinema-lightbox-inner { width:min(1400px,100%); }
+.cinema-lightbox-close { position:absolute; top:18px; right:22px; border:0; background:none; color:#fff; font-size:38px; }
+
+@media (max-width: 768px) {
+  .cinema-cover .trailer-play { width:58px; height:58px; font-size:22px; }
+  .cinema-cover-copy { left:16px; bottom:14px; }
+  .cinema-cover-copy strong { font-size:15px; }
+  .cinema-toolbar { align-items:flex-start; flex-direction:column; }
+  .cinema-actions { width:100%; }
+  .cinema-actions > * { flex:1; justify-content:center; }
+  .cinema-external span { display:none; }
+  .legal-watch-heading { flex-direction:column; gap:12px; }
+  .provider-row { grid-template-columns:1fr; }
+  .movie-card-play { opacity:1; width:42px; height:42px; font-size:22px; background:rgba(229,9,20,.85); }
+}
